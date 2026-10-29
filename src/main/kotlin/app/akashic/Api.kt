@@ -28,13 +28,13 @@ class ActorAuth(private val env: Map<String, String>) {
     private val jwks by lazy { JwkProviderBuilder(URL(jwksUrl)).build() }
 
     init {
-        require(mode in setOf("dev", "oidc")) { "AUTH_MODE must be dev or oidc; disabled by default" }
+        require(mode in setOf("dev", "oidc", "locked")) { "AUTH_MODE must be dev, oidc or locked" }
         if (mode == "dev") {
             require(env["APP_ENV"] == "development") { "Dev bearer cannot run outside development" }
             require((env["HOST"] ?: "127.0.0.1") in setOf("127.0.0.1", "::1", "localhost")) {
                 "Dev bearer must bind to loopback only"
             }
-        } else {
+        } else if (mode == "oidc") {
             require(issuer.startsWith("https://") && audience.isNotBlank() && jwksUrl.startsWith("https://")) {
                 "OIDC requires HTTPS issuer, HTTPS JWKS, and explicit audience"
             }
@@ -42,6 +42,7 @@ class ActorAuth(private val env: Map<String, String>) {
     }
 
     fun actor(authorization: String?): String {
+        if (mode == "locked") throw EngineException(503, "AUTH_NOT_CONFIGURED", "Game API is not yet available")
         if (authorization == null || !authorization.startsWith("Bearer ") || authorization.length > 8192) {
             throw EngineException(401,"UNAUTHENTICATED","Bearer token required")
         }
