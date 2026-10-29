@@ -51,7 +51,17 @@ fun main() {
     val store = if (env["AUTH_MODE"] == "locked") null else {
         val pool = dataSourceFromEnv(env)
         Runtime.getRuntime().addShutdownHook(Thread { pool.close() })
-        migrate(pool)
+        // Never run Flyway against a pooled runtime connection. Migration has
+        // its own explicit direct-connection locked bootstrap path.
+        pool.connection.use { conn ->
+            conn.prepareStatement(
+                "SELECT COUNT(*) FROM public.flyway_schema_history WHERE version='1' AND success=TRUE"
+            ).use { statement ->
+                statement.executeQuery().use { rs ->
+                    require(rs.next() && rs.getInt(1) == 1) { "World schema migration V1 is missing" }
+                }
+            }
+        }
         PostgresStore(pool)
     }
     embeddedServer(Netty,host=host,port=port) { akashicModule(store,auth) }.start(wait=true)
