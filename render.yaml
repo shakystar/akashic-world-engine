@@ -1,4 +1,5 @@
-# Development-only; external Neon DB, do not deploy without code/tests/OIDC.
+# Initial deployment is deliberately locked: health-only, no game endpoints.
+# Configure Neon and OIDC securely before activating production game APIs.
 services:
   - type: web
     name: akashic-world-engine-dev
@@ -6,7 +7,7 @@ services:
     region: singapore
     plan: free
     branch: main
-    autoDeployTrigger: 'off'
+    autoDeployTrigger: "off"
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health
@@ -14,24 +15,12 @@ services:
       - key: APP_ENV
         value: production
       - key: AUTH_MODE
-        value: oidc
+        value: locked
       - key: HOST
         value: 0.0.0.0
       - key: PORT
-        value: '10000'
+        value: "10000"
       - key: DB_POOL_SIZE
-        value: '3'
+        value: "3"
       - key: JAVA_TOOL_OPTIONS
-        value: '-XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=15.0'
-      - key: DATABASE_URL
-        sync: false
-      - key: DATABASE_USER
-        sync: false
-      - key: DATABASE_PASSWORD
-        sync: false
-      - key: JWT_ISSUER
-        sync: false
-      - key: JWT_AUDIENCE
-        sync: false
-      - key: JWT_JWKS_URL
-        sync: false
+        value: "-XX:MaxRAMPercentage=60.0 -XX:InitialRAMPercentage=15.0"
