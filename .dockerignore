@@ -1,0 +1,15 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+.gradle
+build
+**/build
+**/__pycache__
+**/*.pyc
+*.zip
+*.log
+.DS_Store
+.idea
+.vscode
