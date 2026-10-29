@@ -63,3 +63,19 @@ The goal is a fully verifiable, publicly reachable **API that denies unauthorize
 - GitHub Actions run `40797655493` passed at commit `4dcf6eee97398d58bec7fa5b24c6d04fe9dc96a9`.
 - **Not yet confirmed:** Real Neon Auth token claims (`aud` and `iss` in particular), live JWKS algorithm and key rotation, browser login and the protected API path. Do not replace the locked Render deployment with an OIDC-enabled one yet.
 - Database schema remains only in the isolated validation branch. The Neon primary DB only has managed `neon_auth` schema, not World Engine tables.
+
+## Live connection audit — 2026-10-29
+
+- Rechecked primary Neon DB `akashic`: the World Engine `public` tables are still absent. Do not claim live database migration was applied.
+- Read Neon Auth `neon_auth.jwks` metadata without accessing private key material: no rows were available before an actual sign-in/token issuance. Therefore actual hosted signing key `kid`/token claims are still unverified.
+- Render service has non-secret `JWT_ISSUER` and `JWT_JWKS_URL` values configured. Environment change redeployed and was observed `live`; `AUTH_MODE=locked` was retained. No Neon database credentials were pushed through cross-provider tools.
+- The official Managed Better Auth SDK uses `authClient.token()` for the short-lived JWT. A real end-to-end token test must be performed after implementing a secured temporary test login client. Never log or persist the token.
+- Important: Neon Auth Managed JWT uses EdDSA/Ed25519 and 15-minute expiry; a real token still needs the precise `iss`/`aud` claims verified against the Ktor configuration.
+
+### Operator handoff (secrets must be set in Render Dashboard)
+
+1. Open Neon Console → `ai-trpg-akashic-dev` → `main` → `akashic` → Connection Details. Select **direct (unpooled)** connection for Flyway. Do not copy a secret into GitHub, chat or logs.
+2. Open Render → `akashic-world-engine-dev` → Environment. Add `DATABASE_URL` in PostgreSQL JDBC format `jdbc:postgresql://<direct-host>/akashic?sslmode=require`, `DATABASE_USER`, and `DATABASE_PASSWORD` as hidden service values.
+3. Keep `AUTH_MODE=locked` until an approved, authenticated integration test and migration plan is ready. Current locked startup intentionally does not initialize the DB, even when credentials are present.
+4. Configure `JWT_AUDIENCE` only after inspecting a real Neon-issued short-lived JWT's non-secret claims. The current verifier rejects any audience mismatch. Do not disable that check.
+5. For the first authenticated deployment, use the **primary direct** DB URL to apply Flyway V1 exactly once. Do not repeat the SQL-only staging validation against an already-Flyway-managed schema.
