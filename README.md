@@ -1,28 +1,52 @@
 # Akashic World Engine
 
-Server-authoritative AI TRPG world simulation, designed for Kotlin/Ktor, PostgreSQL and Godot clients.
+Server-authoritative AI TRPG world simulation prototype.
 
-> **Status: initial public repository scaffold — not a deployed or validated backend.** This repository is intentionally public at present. Do not commit credentials, real lore documents, user data or private NPC secrets.
+**Repository visibility:** PUBLIC (temporary, at owner's request). No credentials, private world lore or real player data should be committed.
 
-## Architecture contract (v1)
+**Status:** Kotlin/Ktor + PostgreSQL reference implementation uploaded, with real build and DB tests still pending. Not deployed.
 
-- Godot sends JSON commands; the World Engine validates and commits state changes.
-- One isolated World Instance per player or party; server owns world time and truth.
-- Hybrid clock: interaction, continuous and fast-forward modes.
-- Append-only event log, state projections, deterministic replay and idempotent commands.
-- LLM-generated text is never trusted as authoritative state; client ChatGPT tokens never reach the server.
-- Actor-visible responses must exclude private NPC beliefs and undiscovered lore.
-- PostgreSQL transactions must atomically update events, state, schedules and idempotency.
+## Technology
 
-## Intended deployment
+- Kotlin/JDK 21, Ktor, Gradle 9.1
+- PostgreSQL 17 + Flyway, JDBC/Hikari
+- Docker multi-stage image
+- Render development-only Blueprint (`render.yaml`), auto-deploy disabled
+- GitHub Actions with PostgreSQL integration test
 
-- Ktor server on Render, Singapore region; external Neon PostgreSQL 17 database `akashic`.
-- Godot web client on a separate Cloudflare Pages project.
-- Production OIDC required; development authentication MUST NOT be publicly reachable.
+## World model
 
-## Next steps
+Each player owns an isolated World Instance. The server alone determines valid actions and world-time progression. Clients submit JSON commands and receive sanitized, actor-visible events. LLM narration and generated images may enhance presentation but never change the authoritative state.
 
-The full local reference package has not yet been uploaded. Run the GitHub Actions verification after adding the Kotlin sources, Dockerfile, Flyway migrations and contract tests. Do not deploy until Gradle build, PostgreSQL integration and authentication checks pass.
+The initial fixture supports `dialogue.speak`, `character.move`, `world.inspect`, `character.rest`; two locations and two NPCs. It is not the final lore or a complete playable game.
 
-Source package: `akashic-world-engine-render-ready-2026-10-29.zip` (local handoff; never commit credentials).
+## Development
 
+Requirements: JDK 21, Gradle 9.1, Docker/Podman.
+
+```sh
+cp .env.example .env
+# Use a unique local database password and do not commit .env.
+docker compose up -d db # compose.yaml is not yet included in the remote scaffold
+# With PostgreSQL running, export DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD
+export APP_ENV=development AUTH_MODE=dev HOST=127.0.0.1 PORT=8765
+gradle --no-daemon test installDist
+gradle --no-daemon run
+```
+
+Production requires `AUTH_MODE=oidc`, a valid HTTPS OIDC issuer and JWKS, a nonempty JWT audience, protected database credentials, and completed authorization checks.
+
+## Deployment
+
+- Render web service: `akashic-world-engine-dev` planned, not created.
+- Neon external database `ai-trpg-akashic-dev` exists independently; **do not put Neon connection strings in source**.
+- Cloudflare Pages `ai-trpg-client` exists but Godot content has not yet been deployed.
+- `render.yaml` uses a development-only free plan and disables auto-deploy intentionally.
+- Do not deploy or enable public game APIs until CI passes and real OIDC integration is verified.
+
+## Missing / follow-up
+
+- Import full frozen OpenAPI and JSON Schema contract documents from local handoff package.
+- Reconcile the full original integration test suite and verify GitHub CI.
+- Verify real Gradle build, dependency compatibility and schema migrations.
+- Connect Godot client and real approved world lore.
