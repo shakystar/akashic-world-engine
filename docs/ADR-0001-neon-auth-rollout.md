@@ -18,7 +18,7 @@ The production/default Neon **public** schema has **not** had the World Engine F
 - Neon Auth authenticates players into game accounts. It must remain separate from ChatGPT user-side inference authorization.
 - Client ChatGPT OAuth tokens and image generation permissions NEVER transit to the World Engine.
 - World Engine verifies only the intended game ID token; it MUST validate signature and key, algorithm, issuer, audience, exp, iat and subject.
-- Existing Ktor verifier accepts **RS256** JWTs with required issuer and audience, using the JWKS URL. Neon Auth compatibility is **not yet verified**: before activation inspect an actual issued ID/JWT token (do not expose it), published JWKS metadata, and provider documentation. If Neon Auth issues another algorithm/claims set or cookie sessions, adapt and test an appropriate supported verification method. Never disable signature, issuer or audience checks just to make authentication pass.
+- Ktor verifier was updated on 2026-10-29 to require **EdDSA/Ed25519** signatures for Neon Auth. A locally generated Ed25519 test JWT passed verification and forged/expired/wrong-audience fixtures were rejected in GitHub CI. Actual Neon-issued token compatibility is **not yet verified**: before activation inspect an actual issued ID/JWT token (do not expose it), published JWKS metadata, and provider documentation. If Neon Auth issues another algorithm/claims set or cookie sessions, adapt and test an appropriate supported verification method. Never disable signature, issuer or audience checks just to make authentication pass.
 - At provision time Neon Auth's development settings allowed email/password signup without required email verification. **Do not link a public registration UI or advertise it until sign-up policies, domain allowlist, verification and abuse controls have been reviewed.**
 - Unknown token -> 401. Wrong viewer/world -> 404. Wrong actor ID -> 403. Missing server auth configuration -> 503.
 - Client receives only actor-visible state, never hidden beliefs or private canonical lore.
@@ -55,3 +55,11 @@ JWT_JWKS_URL=<provider JWKS endpoint>
 Build a Neon Auth integration fixture that captures only non-secret token metadata (`alg`, `iss`, `aud` shape) and verifies one short-lived token in-memory without saving it to CI artifacts, logs, repository or user data files. Then update Ktor verifier only if the actual claims require a change. Add negative tests.
 
 The goal is a fully verifiable, publicly reachable **API that denies unauthorized access**, not public access to game world state by default.
+
+## Verification update — 2026-10-29
+
+- `Auth.kt` now validates EdDSA/Ed25519 signatures using a cached, pinned-host Neon Auth JWKS, and enforces issuer, audience, subject and token times.
+- `NeonJwtVerificationTest.kt` creates and signs disposable Ed25519 JWTs in CI; valid and invalid signatures and claims are tested without exposing credentials.
+- GitHub Actions run `40797655493` passed at commit `4dcf6eee97398d58bec7fa5b24c6d04fe9dc96a9`.
+- **Not yet confirmed:** Real Neon Auth token claims (`aud` and `iss` in particular), live JWKS algorithm and key rotation, browser login and the protected API path. Do not replace the locked Render deployment with an OIDC-enabled one yet.
+- Database schema remains only in the isolated validation branch. The Neon primary DB only has managed `neon_auth` schema, not World Engine tables.
