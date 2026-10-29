@@ -1,0 +1,40 @@
+name: World Engine CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: akashic
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: akashic
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U akashic -d akashic"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/akashic
+      TEST_DATABASE_USER: akashic
+      TEST_DATABASE_PASSWORD: test-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
+      - name: Test Kotlin, Ktor, and PostgreSQL atomicity
+        run: gradle --no-daemon clean test installDist
+      - name: Validate external schemas and frozen contract examples
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema pyyaml
+          python tools/validate_contracts.py
