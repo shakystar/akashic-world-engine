@@ -34,4 +34,6 @@ jobs:
           gradle-version: '9.1.0'
       - name: Build and test against PostgreSQL
         run: gradle --no-daemon clean test installDist
+      - name: Check web demo JavaScript syntax
+        run: node --check web-demo/app.js
       # Contract schema validation is enabled after contracts/ is published.
