@@ -45,6 +45,49 @@
     if(next==='archive'){passage('나무의 그늘을 빠져나오자, 무너진 아치와 창문 없는 돌벽이 모습을 드러낸다. 서고 안쪽에서는 설명할 수 없는 푸른 빛이 새어 나온다.');chronicle('이름 없는 서고를 발견하다','숲 깊은 곳에서 폐허가 된 기록의 장소를 찾았다.');}
     if(next==='inn'){passage('여관의 벽난로는 여전히 타오르고 있다. 주인은 당신을 힐끗 보지만, 돌아온 이유를 묻지 않는다.');}
   }
+  // Offline dialogue fallback is a scripted UX bridge, NOT a language model.
+  // When a secured narration API is configured, client-side conversation will be
+  // routed to that service; no AI provider key belongs in this public bundle.
+  function freeformDialogue(text){
+    const t=text.toLowerCase().replace(/\s+/g,' ').trim();
+    const atInn=game.location==='inn';
+    const asksRoom=/(잘\s*곳|묵을|숙박|하룻밤|방이|방을|객실|잠자리|자고\s*갈|쉴\s*곳|자는\s*곳)/.test(t);
+    const asksPrice=/(얼마|가격|값이|비용|동전|숙박비|요금)/.test(t);
+    const isGreeting=/(안녕|반갑|좋은\s*밤|실례|처음\s*뵙)/.test(t);
+    const isQuestion=/(\?|요[.?]?|까요[.?]?|습니까[.?]?|는지요[.?]?|어디|누구|무엇|왜|어떻게|알려|설명|궁금|있나|있소)/.test(t);
+    if(atInn){
+      // Distinguish booking enquiry from actually resting: inquiry never advances hours.
+      if(asksRoom || asksPrice){
+        advance(60);game.flags.metKeeper=true;
+        passage('주인은 장부를 펼쳐 손가락으로 빈 칸을 더듬는다. 벽난로의 불빛이 그의 손등을 스친다.');
+        add('speech',asksPrice
+          ? '방값은 오늘 밤 장부를 확인해야겠소. 머물 생각이라면 먼저 이름을 적어 두시오. 결제나 방 배정은 아직 이루어지지 않았소.'
+          : '밤을 보내실 곳을 찾는군. 우선 불가에서 몸을 녹이시오. 빈방이 있는지 장부를 살펴보겠소.','여관 주인');
+        return true;
+      }
+      if(isGreeting){
+        advance(35);game.flags.metKeeper=true;
+        add('speech','어서 오시오, 여행자. 비를 많이 맞았군. 이 밤에 무엇을 찾으시오?','여관 주인');
+        return true;
+      }
+      if(isQuestion || /(주인|그에게|당신|그대|부탁|청하)/.test(t)){
+        advance(45);game.flags.metKeeper=true;
+        add('speech','그 물음에 쉽게 대답하긴 어렵겠군. 내가 아는 것이라면 말해 주겠소. 무엇이 가장 궁금하오?','여관 주인');
+        return true;
+      }
+      passage('여관 주인은 당신의 말을 듣고 잠시 생각한다. 그는 성급히 약속하지 않고 낡은 장부 쪽으로 시선을 돌린다.');
+      add('speech','무슨 뜻인지는 알겠소. 구체적으로 무엇을 원하시오?','여관 주인');
+      advance(30);return true;
+    }
+    if(game.location==='road'){
+      advance(20);
+      passage('당신의 말이 젖은 나무들 사이에 머문다. 숲은 대답하지 않지만, 선택하지 않은 길도 여전히 그 자리에 있다.');
+      return true;
+    }
+    advance(20);
+    passage('서고는 당신의 물음에 답하는 대신 먼지 낀 책장과 흐릿한 인장을 보여 준다. 지금은 이곳에서 확인할 수 있는 사실만 알 수 있다.');
+    return true;
+  }
   function resolve(text){const input=text.toLowerCase().replace(/\s+/g,' ').trim();const has=(...terms)=>terms.some(x=>input.includes(x));
     const current=game.location;
     if(has('돌아','되돌','귀환','back','여관으로')&&current!=='inn'){
@@ -52,7 +95,7 @@
     if(has('서고','기록관','archive','폐허로')&&current==='road'&&has('가','향','이동','들어','찾')){advance(120);changeScene('archive');return true;}
     if(has('북쪽','숲길','forest','나선','떠난','나가')&&current==='inn'&&has('가','향','이동','나선','나가','떠난')){advance(120);changeScene('road');return true;}
     if(has('숲길','밖으로','돌아')&&current==='archive'&&has('가','향','이동','돌아','나가')){advance(120);changeScene('road');return true;}
-    if(has('쉬','휴식','잠','기다','시간을','rest','대기','밤을 보내')){
+    if(!/(잘\s*곳|숙박|묵을|잠자리|자고\s*갈|쉴\s*곳|얼마|가격)/.test(input) && has('쉬자','쉰다','휴식한다','잠을 잔다','잠을 자','기다린다','시간을 보낸다','rest','대기한다','밤을 보낸다')){
       const interrupted=advance(3600);passage(interrupted?'잠시 눈을 감자 멀리서 들려온 종소리가 당신을 깨운다. 밤은 아직 깊다.':'모닥불의 숨소리와 바깥의 바람 소리 속에서 시간이 흘러간다. 세상은 당신을 기다려 주지 않는다.');return true;}
     if(current==='inn'){
       if(has('대화','물어','묻','질문','말','이야기','여관 주인','주인에게','keeper','소문')){
@@ -78,9 +121,9 @@
     return false;
   }
   async function submit(){if(busy)return;const textarea=$('actionInput');const text=textarea.value.trim();if(!text)return;if(text.length>360){tell('입력이 너무 깁니다.');return;}busy=true;$('sendAction').disabled=true;$('statusText').textContent='세계가 당신의 행동을 판단하고 있습니다…';game.turn++;game.draft='';add('player',text);rememberedDraft='';historyIndex=-1;textarea.value='';resize(textarea);
-    // The demo is intentionally deterministic and local. No backend/AI calls or fake network requests.
+    // Offline demo: natural dialogue fallback is scripted, not generative AI.
     await new Promise(resolve=>setTimeout(resolve,120));
-    const supported=resolve(text);if(!supported) notifyInvalid();save();updateHeader();suggestions();refreshWindows();busy=false;$('sendAction').disabled=false;$('statusText').textContent='Enter 행동 확정 · Shift+Enter 줄바꿈';textarea.focus();}
+    const supported=resolve(text);if(!supported) freeformDialogue(text);save();updateHeader();suggestions();refreshWindows();busy=false;$('sendAction').disabled=false;$('statusText').textContent='Enter 행동 확정 · Shift+Enter 줄바꿈';textarea.focus();}
   function resize(t){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,116)+'px';}
   function tell(s){const t=$('toast');t.textContent=s;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,2400);}
   function windowContents(id){const t=game.seconds;const current=LOCATIONS[game.location];switch(id){
