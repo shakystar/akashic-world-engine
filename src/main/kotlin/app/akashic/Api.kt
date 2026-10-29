@@ -104,7 +104,9 @@ private suspend fun io.ktor.server.application.ApplicationCall.safelyAuthenticat
     }
 }
 
-fun Application.akashicModule(store: PostgresStore, auth: ActorAuth) {
+fun Application.akashicModule(store: PostgresStore?, auth: ActorAuth) {
+    fun requireStore(): PostgresStore = store
+        ?: throw EngineException(503, "AUTH_NOT_CONFIGURED", "Game API is not yet available")
     install(ContentNegotiation) { jackson() }
     routing {
         get("/health") {
@@ -115,7 +117,7 @@ fun Application.akashicModule(store: PostgresStore, auth: ActorAuth) {
         }
         post("/v1/worlds") {
             call.safelyAuthenticated({ actor ->
-                call.respond(HttpStatusCode.Created,store.createWorld(actor,call.jsonBody()))
+                call.respond(HttpStatusCode.Created,requireStore().createWorld(actor,call.jsonBody()))
             },auth)
         }
         route("/v1/worlds/{worldId}") {
@@ -123,7 +125,7 @@ fun Application.akashicModule(store: PostgresStore, auth: ActorAuth) {
                 call.safelyAuthenticated({ actor ->
                     val id = call.parameters["worldId"]
                         ?: throw EngineException(400,"BAD_REQUEST","Missing worldId")
-                    call.respond(store.view(id,actor))
+                    call.respond(requireStore().view(id,actor))
                 },auth)
             }
             get("/events") {
@@ -135,14 +137,14 @@ fun Application.akashicModule(store: PostgresStore, auth: ActorAuth) {
                         (call.request.queryParameters.getAll("cursor")?.size ?: 0) > 1) {
                         throw EngineException(400,"BAD_REQUEST","Invalid event cursor")
                     }
-                    call.respond(store.events(id,actor,call.request.queryParameters["cursor"]))
+                    call.respond(requireStore().events(id,actor,call.request.queryParameters["cursor"]))
                 },auth)
             }
             post("/commands") {
                 call.safelyAuthenticated({ actor ->
                     val id = call.parameters["worldId"]
                         ?: throw EngineException(400,"BAD_REQUEST","Missing worldId")
-                    val result = store.command(id,actor,call.jsonBody())
+                    val result = requireStore().command(id,actor,call.jsonBody())
                     val status = if (result["status"] == "accepted") HttpStatusCode.OK
                         else HttpStatusCode.UnprocessableEntity
                     call.respond(status,result)
