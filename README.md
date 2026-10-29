@@ -50,3 +50,9 @@ Production requires `AUTH_MODE=oidc`, a valid HTTPS OIDC issuer and JWKS, a none
 - Reconcile the full original integration test suite and verify GitHub CI.
 - Verify real Gradle build, dependency compatibility and schema migrations.
 - Connect Godot client and real approved world lore.
+
+## Locked bootstrap deployment
+
+Set `AUTH_MODE=locked` and `APP_ENV=production` to boot without database credentials. Only `GET /health` succeeds; protected endpoints reject every request with HTTP 503 `AUTH_NOT_CONFIGURED`, even if the client supplies a bearer token. This is deliberately **not a playable deployment**.
+
+To enable the actual game API, configure DB and OIDC secrets in the hosting dashboard, validate migration in a staging branch, then switch to `AUTH_MODE=oidc`. Do not set `AUTH_MODE=dev` on a hosted instance.
