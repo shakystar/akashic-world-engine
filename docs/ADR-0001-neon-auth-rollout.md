@@ -79,3 +79,16 @@ The goal is a fully verifiable, publicly reachable **API that denies unauthorize
 3. Keep `AUTH_MODE=locked` until an approved, authenticated integration test and migration plan is ready. Current locked startup intentionally does not initialize the DB, even when credentials are present.
 4. Configure `JWT_AUDIENCE` only after inspecting a real Neon-issued short-lived JWT's non-secret claims. The current verifier rejects any audience mismatch. Do not disable that check.
 5. For the first authenticated deployment, use the **primary direct** DB URL to apply Flyway V1 exactly once. Do not repeat the SQL-only staging validation against an already-Flyway-managed schema.
+
+## Primary Neon database milestone — 2026-10-29
+
+- Verified saved Render JDBC credentials using a **read-only** `DB_PREFLIGHT` startup probe: `status=CONNECTED`.
+- On the existing development primary database `akashic` (Neon branch `main`), the locked Render service applied `V1__turn_core.sql` with **actual Flyway** over the **direct, non-pooled** TLS PostgreSQL endpoint. Render logged `Successfully applied 1 migration ... v1` and `DB_BOOTSTRAP_MIGRATE status=SUCCESS`.
+- Read back `public.flyway_schema_history` from Neon: `version=1`, `success=true`, `description=turn core`.
+- Read back six game tables (`worlds`, `world_events`, `visible_events`, `scheduled_events`, `actor_beliefs`, `command_results`), plus Flyway history. Verified `world_events` anti-mutation trigger enabled.
+- `DB_BOOTSTRAP_MIGRATE` was subsequently set to `false` in Render, triggering a normal locked-mode redeployment. Keep that flag off. The application remains **AUTH_MODE=locked**; no live gameplay or user-specific JWT flow has been enabled.
+- Secrets stayed in Render; no password was committed to GitHub or written in this ADR.
+
+### Remaining auth milestone
+
+Live Neon-issued JWT token acquisition from a consented test user, claim inspection without recording the bearer, validation of EdDSA/JWKS key metadata and exact `iss`/`aud`. Only then turn on OIDC and run the cross-user/world isolation test. Do not infer `JWT_AUDIENCE` from application or domain name.
