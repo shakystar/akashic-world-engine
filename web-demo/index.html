@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#10100f" />
+  <meta name="description" content="아카식 연대기: 선택과 기록이 남는 인터랙티브 판타지 소설 웹 데모" />
+  <title>아카식 연대기 — 첫 번째 밤</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+ <div id="app" class="app">
+   <header class="topline">
+     <div class="brand"><span class="brand-sigil" aria-hidden="true">✦</span><span class="brand-name">아카식 연대기</span><span class="brand-divider">/</span><span id="placeLabel" class="place-label">잿빛 여관</span></div>
+     <div class="top-right"><span id="timeLabel">첫째 날 · 밤</span><span class="mode-mark" title="로컬 시뮬레이션 — 실제 World Engine 서버와 연결되어 있지 않습니다">LOCAL DEMO</span><button id="openMenu" class="icon-button" type="button" aria-label="창과 메뉴 열기" title="정보창 및 설정">•••</button></div>
+   </header>
+   <main class="stage">
+     <section class="scene-frame" aria-label="현재 장면">
+       <canvas id="scene" width="384" height="216" role="img" aria-label="촛불이 밝힌 잿빛 여관의 도트 아트"></canvas>
+       <div class="scene-overlay" aria-hidden="true"></div>
+       <div class="scene-corner"><span class="scene-line"></span><span id="sceneTitle">제1장 · 잿빛 여관</span></div>
+       <div class="scene-progress"><span id="sceneStatus">여정이 시작되었다</span></div>
+     </section>
+     <section class="reading" aria-label="이야기">
+       <div id="feed" class="feed" tabindex="0" aria-live="off"></div>
+       <button id="jumpLatest" class="jump-latest" hidden type="button">최신 이야기로 ↓</button>
+     </section>
+     <section class="composer-area" aria-label="행동 입력">
+       <div id="suggestions" class="suggestions" aria-label="추천 행동"></div>
+       <div class="composer-shell">
+         <label class="sr-only" for="actionInput">다음 행동을 입력하세요</label>
+         <textarea id="actionInput" rows="1" maxlength="360" placeholder="무엇을 하시겠습니까?  자유롭게 이야기하거나 행동하세요." spellcheck="true"></textarea>
+         <button id="sendAction" class="send-button" type="button" title="행동 확정 (Enter)" aria-label="행동 확정"><span aria-hidden="true">↵</span></button>
+       </div>
+       <div class="hint-bar"><span id="statusText" role="status" aria-live="polite">Enter 행동 확정 · Shift+Enter 줄바꿈</span><span><kbd>?</kbd> 단축키 안내 <span class="mid-divider">·</span> <kbd>F2</kbd> 입력 포커스</span></div>
+     </section>
+   </main>
+   <div id="windowLayer" class="window-layer" aria-label="정보창 레이어"></div>
+   <div id="menuPopover" class="menu-popover" hidden><div class="popover-title">여행자의 도구</div><div id="menuItems" class="menu-items"></div><div class="popover-tail">정보창은 단축키로도 열 수 있습니다.</div></div>
+   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+ </div>
+ <script src="./app.js" defer></script>
+</body>
+</html>
