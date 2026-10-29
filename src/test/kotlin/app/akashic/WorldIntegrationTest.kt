@@ -59,6 +59,13 @@ class WorldIntegrationTest {
         assertTrue(!publicEvents.contains(FixtureRules.PRIVATE_NPC_BELIEF))
     }
 
+    @Test fun lockedModeDeniesAllPlayerActions() {
+        val auth = ActorAuth(mapOf("APP_ENV" to "production", "AUTH_MODE" to "locked", "HOST" to "0.0.0.0"))
+        val error = assertFailsWith<EngineException> { auth.actor("Bearer arbitrary") }
+        assertEquals(503, error.status)
+        assertEquals("AUTH_NOT_CONFIGURED", error.code)
+    }
+
     @Test fun authRejectsUnsafeConfiguration() {
         assertFailsWith<IllegalArgumentException> {
             ActorAuth(mapOf("APP_ENV" to "production", "AUTH_MODE" to "dev", "HOST" to "0.0.0.0"))
