@@ -31,6 +31,22 @@ fun main() {
             }
         }
     }
+    // Explicit, one-off Flyway bootstrap. Must use Neon DIRECT host, never pooled.
+    if (env["AUTH_MODE"] == "locked" && env["DB_BOOTSTRAP_MIGRATE"] == "true") {
+        val directUrl = env["DATABASE_MIGRATION_URL"]
+        require(directUrl != null && directUrl.startsWith("jdbc:postgresql://") &&
+            !directUrl.substringBefore("/akashic").contains("-pooler") &&
+            directUrl.substringBefore("?").endsWith("/akashic") &&
+            directUrl.contains("sslmode=require")) { "Direct TLS migration URL required" }
+        try {
+            dataSourceFromEnv(env + ("DATABASE_URL" to directUrl)).use { pool -> migrate(pool) }
+            println("DB_BOOTSTRAP_MIGRATE status=SUCCESS")
+        } catch (e: Exception) {
+            // No exception message or stack trace; JDBC and Flyway may contain secrets.
+            System.err.println("DB_BOOTSTRAP_MIGRATE status=FAILED type=" + e.javaClass.simpleName)
+            throw IllegalStateException("Migration failed; refusing application startup")
+        }
+    }
     // Locked bootstrap: expose health only; never require DB credentials before auth is ready.
     val store = if (env["AUTH_MODE"] == "locked") null else {
         val pool = dataSourceFromEnv(env)
