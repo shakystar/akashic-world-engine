@@ -78,6 +78,18 @@ fun Application.akashicModule(store: PostgresStore?, auth: ActorAuth) {
                     call.respond(requireStore().events(id,actor,call.request.queryParameters["cursor"]))
                 },auth)
             }
+            post("/narration") {
+                call.safelyAuthenticated({ actor ->
+                    val id = call.parameters["worldId"]
+                        ?: throw EngineException(400, "BAD_REQUEST", "Missing worldId")
+                    // Authorization and visibility checks precede any billable LLM request.
+                    val view = requireStore().view(id, actor)
+                    val body = call.jsonBody()
+                    Wire.objectFields(body, setOf("text"), setOf("text"), "narration request")
+                    val userText = Wire.text(body.get("text"), 1200, "text")
+                    call.respond(NarrationService().reply(actor, id, view, userText))
+                }, auth)
+            }
             post("/commands") {
                 call.safelyAuthenticated({ actor ->
                     val id = call.parameters["worldId"]
