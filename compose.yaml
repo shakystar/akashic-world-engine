@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: akashic
+      POSTGRES_USER: akashic
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in .env}
+    volumes:
+      - akashic_pg:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U akashic -d akashic"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  engine:
+    build: .
+    profiles: ["server"]
+    environment:
+      APP_ENV: production
+      AUTH_MODE: oidc
+      HOST: 0.0.0.0
+      PORT: 8765
+      DATABASE_URL: jdbc:postgresql://db:5432/akashic
+      DATABASE_USER: akashic
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Set DATABASE_PASSWORD in .env}
+      JWT_ISSUER: ${JWT_ISSUER:-}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-}
+      JWT_JWKS_URL: ${JWT_JWKS_URL:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8765:8765"
+volumes:
+  akashic_pg:
